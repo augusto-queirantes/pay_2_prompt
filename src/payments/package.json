@@ -1,0 +1,8 @@
+{
+  "name": "paywall-service",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "contract": "workspace:*"
+  }
+}

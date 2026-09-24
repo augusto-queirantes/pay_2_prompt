@@ -2,9 +2,14 @@
   "name": "pay_2_prompt",
   "private": true,
   "type": "module",
+  "workspaces": ["src/*"],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "checkout": "bun --env-file=.env scripts/checkout.ts"
+    "test": "bun test",
+    "paywall": "bun src/payments/index.ts",
+    "checkout": "bun --env-file=.env scripts/checkout.ts",
+    "e2e": "bun scripts/e2e.ts",
+    "fake-justifi": "bun scripts/fake-justifi.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

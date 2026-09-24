@@ -1,0 +1,12 @@
+{
+  "publishers": [
+    {
+      "id": "gmail-demo",
+      "api_key": "pub_test_change_me",
+      "sub_account_id": "$JUSTIFI_SUB_ACCOUNT_ID",
+      "products": {
+        "gmail_send": { "amount": 500, "description": "Gmail MCP: send email (lifetime)" }
+      }
+    }
+  ]
+}

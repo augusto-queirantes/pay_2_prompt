@@ -1,0 +1,12 @@
+{
+  "publishers": [
+    {
+      "id": "gmail-demo",
+      "api_key": "pub_e2e",
+      "sub_account_id": "acc_docker",
+      "products": {
+        "gmail_send": { "amount": 500, "description": "Gmail MCP: send email (lifetime)" }
+      }
+    }
+  ]
+}

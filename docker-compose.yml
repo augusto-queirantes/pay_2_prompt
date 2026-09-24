@@ -1,0 +1,51 @@
+# Paywall service + a fake JustiFi, no keys needed.
+#
+#   docker compose up --build -d
+#   E2E_PAYWALL_URL=http://localhost:4242 E2E_JUSTIFI_URL=http://localhost:4999 bun run e2e
+#   docker compose down        # add -v to also delete the SQLite volume
+#
+# Checkout links point at http://localhost:4999/hosted-checkout/<id>, a fake
+# page with a "Pay" button, so the flow can also be clicked through by hand.
+#
+# Against real JustiFi (test mode), using .env and paywall.config.json:
+#
+#   cp paywall.config.example.json paywall.config.json   # once
+#   docker compose up --build -d paywall-justifi         # on http://localhost:4243
+#   docker compose logs -f paywall-justifi
+services:
+  fake-justifi:
+    build: .
+    command: ["bun", "scripts/fake-justifi.ts"]
+    environment:
+      PORT: "4999"
+    ports:
+      - "4999:4999"
+
+  paywall:
+    build: .
+    depends_on:
+      - fake-justifi
+    environment:
+      JUSTIFI_CLIENT_ID: test_docker
+      JUSTIFI_CLIENT_SECRET: docker
+      JUSTIFI_API_URL: http://fake-justifi:4999
+      JUSTIFI_HOSTED_CHECKOUT_URL: http://localhost:4999/hosted-checkout
+    volumes:
+      - ./docker/paywall.config.docker.json:/app/paywall.config.json:ro
+      - paywall-data:/data
+    ports:
+      - "4242:4242"
+
+  paywall-justifi:
+    build: .
+    profiles: ["justifi"] # not started by a plain `docker compose up`
+    env_file: .env
+    volumes:
+      - ./paywall.config.json:/app/paywall.config.json:ro
+      - paywall-justifi-data:/data
+    ports:
+      - "4243:4242"
+
+volumes:
+  paywall-data:
+  paywall-justifi-data:
