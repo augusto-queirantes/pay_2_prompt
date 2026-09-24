@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["bun"]
   },
-  "include": ["packages/*/src/**/*.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts"]
 }

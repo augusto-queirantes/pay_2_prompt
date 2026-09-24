@@ -12,7 +12,7 @@ MCP server --POST /v1/verify--> paywall service --> JustiFi API
 
 - The paywall service is a Bun HTTP server on localhost: `packages/paywall-service`.
 - It holds the JustiFi secret. MCP servers only hold a publisher API key.
-- It uses nothing but the Bun runtime plus `qrcode`: `Bun.serve` for HTTP, `bun:sqlite` for storage and `fetch` for JustiFi.
+- It uses the Bun runtime plus two packages: `Bun.serve` for HTTP, `bun:sqlite` for storage, [`@justifi/justifi-node`](https://github.com/justifi-tech/justifi-node) for JustiFi and `qrcode` for the QR.
 
 ## Configuration
 
@@ -48,16 +48,17 @@ Publishers file. It is gitignored, and `paywall.config.example.json` is committe
 
 ## JustiFi client
 
-The client lives in `packages/paywall-service/src/justifi.ts`. All calls go to `$JUSTIFI_API_URL`.
+The client logic lives in `src/payments/clients/justifi.ts` and its types in `src/payments/types/clients/justifi.types.ts`. It is a thin wrapper over the official SDK `@justifi/justifi-node`, which gets and caches the access token (12h) and reads the API host from `JUSTIFI_API_URL`.
 
-| Function | Call | Notes |
+| Function | SDK call | Notes |
 |---|---|---|
-| `getToken()` | `POST /oauth/token` `{client_id, client_secret}` | The token lasts 24h. Cache it in memory. On any `401`, clear the cache and retry once. |
-| `createCheckout({subAccountId, amount, description, metadata})` | `POST /v1/checkouts` with the `Sub-Account` header | Returns `{id, status}` from `data`. `metadata = {user_id, product, publisher}`, used for tracing in the dashboard only. |
-| `getCheckout(id)` | `GET /v1/checkouts/{id}` | Returns `{id, status, successful_payment_id}` from `data`. |
-| `hostedCheckoutUrl(id)` | none | `${JUSTIFI_HOSTED_CHECKOUT_URL}/{id}`. Confirm it with smoke test step 9 in `justifi_spec.md`. |
+| `createCheckout({subAccountId, amount, description, metadata})` | `createCheckout(payload, subAccountId)`, which sends the `Sub-Account` header | Returns `{id, status}`. `metadata = {user_id, product, publisher}`, used for tracing in the dashboard only. |
+| `getCheckout(id)` | `getCheckout(id)` | Returns `{id, status, successfulPaymentId}`. |
+| `hostedCheckoutUrl(id)` | none | `${JUSTIFI_HOSTED_CHECKOUT_URL}/{id}`. Confirmed on staging. |
 
-Any non-2xx response, other than the one `401` retry, throws an error that carries the HTTP status and the response body.
+SDK errors pass through unchanged. They are `{code, message}` objects, not `Error` instances. The SDK's `CheckoutStatus` type only lists `created` and `completed`, so the wrapper uses its own `CheckoutStatus` with all four values.
+
+The SDK uses Node's `https` module, which ignores `HTTPS_PROXY`. It needs direct network access.
 
 Checkout statuses from the [lifecycle docs](https://docs.justifi.tech/checkouts/lifecycle):
 
@@ -128,9 +129,9 @@ The TypeScript types live in `packages/contract` and are shared with the MCP sid
    2. `insert` the row.
    3. Return `{paid: false}` with its URL and QR.
 
-The QR comes from the `qrcode` package:
-- `qr_text = await QRCode.toString(url, {type: "terminal", small: true})`
-- `qr_png_base64 = (await QRCode.toDataURL(url)).split(",")[1]`
+The QR comes from `createCheckoutQrCode(url)` in `src/payments/qr/qrcode.ts`, which uses the `qrcode` package:
+- `qr_text` is `QRCode.toString(url, {type: "utf8"})`, plain Unicode blocks with no ANSI color codes, so it renders inside MCP tool results.
+- `qr_png_base64` is `QRCode.toDataURL(url)` with the `data:image/png;base64,` prefix stripped.
 
 ## Purchase model
 
@@ -142,12 +143,3 @@ The QR comes from the `qrcode` package:
 
 - If two verify calls for the same user and product arrive at the same moment with no row yet, each one creates a checkout. Either one can be paid, and `findLatest` picks the newest. If the user pays the older one, it isn't seen as paid. This is unlikely with one user typing in one agent.
 - Each paid verify costs one SQLite read. Unpaid verifies also make one JustiFi call, with no caching.
-
-## Tests
-
-Run with `bun test`. The JustiFi client is mocked through `fetch`.
-
-- `getToken` is fetched once for two calls, and refetched after a `401`.
-- `createCheckout` sends the `Sub-Account` header and the right body.
-- Verify has a test for every branch: 401, 404, 400, completed row, open row that is now completed, open row still open (same URL), expired row (new checkout), no row (new checkout plus metadata), and JustiFi error (502).
-- The store: `findLatest` with zero, one and many rows, and data survives reopening the file.
