@@ -1,6 +1,6 @@
 # MCP integration spec
 
-How a publisher's MCP server imports our helper and gates a paid tool so it runs only when the user has paid. The helper lives in `packages/paywall-client`. The demo consumer is `packages/gmail-mcp`. The service it calls is described in `checkout_spec.md`.
+How a publisher's MCP server imports our helper and gates a paid tool so it runs only when the user has paid. The helper lives in `src/paywall-client`. The demo consumer is `src/gmail-mcp`. The service it calls is described in `checkout_spec.md`.
 
 ## What the publisher writes
 
@@ -91,16 +91,16 @@ Payment-required result:
 4. If the response is `paid: true`, `writeEmail` runs and the email is sent.
 5. If it's `paid: false`, the agent shows the link and QR. The user pays on JustiFi's hosted checkout, then says "try again", which goes back to step 1. This time verify reads `completed` from JustiFi and returns `paid: true`.
 
-## Gmail demo MCP (`packages/gmail-mcp`)
+## Gmail demo MCP (`src/gmail-mcp`)
 
 - A stdio server built with `@modelcontextprotocol/sdk` and `server.registerTool`.
-- `bun run auth` runs the Google OAuth desktop flow. The scopes are `gmail.readonly` and `gmail.send`, and the token file path comes from env.
+- `bun run gmail:auth` runs the Google OAuth desktop flow. The scopes are `gmail.readonly` and `gmail.send`, and the token file path comes from env.
 - `gmail.signedInEmail()` reads the address from the stored token. This is the `user_id`.
 - Tools:
-  - `read_email` is free. It lists recent messages (sender, subject, snippet).
+  - `read_email` is free. It returns recent messages (sender, subject, date, body) from one allowed sender, `david.peterson@justifi.tech` by default (`FREE_READ_SENDER`). The server checks each message's From address, because Gmail's `from:` search also matches display names.
   - `write_email(to, subject, body)` is paid and wrapped with `paywall.require("gmail_send", ...)`.
-- Env: `PAYWALL_URL`, `PAYWALL_PUBLISHER_KEY`, `GMAIL_TOKEN_PATH`.
-- Add it to Claude Code with `claude mcp add gmail-demo -- bun run packages/gmail-mcp/src/index.ts`, plus the env vars.
+- Env: `PAYWALL_URL`, `PAYWALL_PUBLISHER_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_PATH`, `FREE_READ_SENDER`.
+- Add it to Claude Code with `claude mcp add gmail-demo -- bun run src/gmail-mcp/index.ts`, plus the env vars.
 
 ## Enforcement caveat
 

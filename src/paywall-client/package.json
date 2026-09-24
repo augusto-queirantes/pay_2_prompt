@@ -1,0 +1,11 @@
+{
+  "name": "paywall-client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "contract": "workspace:*"
+  }
+}

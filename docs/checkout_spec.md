@@ -10,7 +10,7 @@ MCP server --POST /v1/verify--> paywall service --> JustiFi API
                                    SQLite
 ```
 
-- The paywall service is a Bun HTTP server on localhost: `packages/paywall-service`.
+- The paywall service is a Bun HTTP server on localhost: `src/payments`.
 - It holds the JustiFi secret. MCP servers only hold a publisher API key.
 - It uses the Bun runtime plus two packages: `Bun.serve` for HTTP, `bun:sqlite` for storage, [`@justifi/justifi-node`](https://github.com/justifi-tech/justifi-node) for JustiFi and `qrcode` for the QR.
 
@@ -71,7 +71,7 @@ Checkout statuses from the [lifecycle docs](https://docs.justifi.tech/checkouts/
 
 ## Storage
 
-The store lives in `packages/paywall-service/src/store.ts` and uses `bun:sqlite`. It has one table, created on startup if missing:
+The store lives in `src/payments/store.ts` and uses `bun:sqlite`. It has one table, created on startup if missing:
 
 ```sql
 CREATE TABLE IF NOT EXISTS checkouts (
@@ -111,7 +111,7 @@ Responses:
 | Bad body | 400 | `{"error": "invalid_request"}` |
 | JustiFi failed | 502 | `{"error": "payment_provider_unavailable"}` |
 
-The TypeScript types live in `packages/contract` and are shared with the MCP side.
+The TypeScript types live in `src/contract` and are shared with the MCP side.
 
 ### Algorithm
 
