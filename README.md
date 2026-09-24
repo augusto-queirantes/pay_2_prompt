@@ -95,3 +95,36 @@ SQLite is a file, not a server: the service opens `paywall.sqlite` (or `$PAYWALL
    ```
 
    Pay the link with card `4242 4242 4242 4242` (any future expiry, CVC `123`), then run the curl again. It returns `{"paid":true}`.
+
+## Gmail demo MCP
+
+`src/gmail-mcp` is a stdio MCP server with two tools:
+
+- `read_email` is free. It only returns emails from `david.peterson@justifi.tech` (override with `FREE_READ_SENDER`). It checks each sender's address, not just Gmail's search, and never calls the paywall.
+- `write_email(to, subject, body)` is paid. It's wrapped in `paywall.require("gmail_send", ...)`, so it only sends after the paywall answers `paid: true` for the signed-in Gmail address.
+
+Setup:
+
+1. **Create a Google OAuth client.** In Google Cloud Console, go to APIs & Services:
+   1. Enable the **Gmail API**.
+   2. On the OAuth consent screen, add your Gmail address as a test user.
+   3. Under Credentials, create an **OAuth client ID** of type **Desktop app**.
+   4. Put its id and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+2. **Sign in.** This opens Google's consent page and saves a refresh token plus your address to `~/.config/pay2prompt/gmail-token.json` (or `$GMAIL_TOKEN_PATH`):
+
+   ```sh
+   bun run gmail:auth
+   ```
+
+3. **Start the paywall.** Use `docker compose up -d paywall-justifi` for real JustiFi on port 4243, or the fake stack on 4242.
+4. **Add it to Claude Code:**
+
+   ```sh
+   claude mcp add gmail-demo \
+     -e PAYWALL_URL=http://localhost:4243 \
+     -e PAYWALL_PUBLISHER_KEY=pub_test_change_me \
+     -e GOOGLE_CLIENT_ID=... -e GOOGLE_CLIENT_SECRET=... \
+     -- bun run "$PWD/src/gmail-mcp/index.ts"
+   ```
+
+Then ask Claude to read David's latest email (free), or to send an email. The first send returns a payment link and QR. Pay it, say "try again", and the email is sent.

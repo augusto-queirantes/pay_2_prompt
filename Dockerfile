@@ -8,6 +8,7 @@ WORKDIR /app
 # Install dependencies first, so code changes don't invalidate this layer.
 COPY package.json bun.lock ./
 COPY src/contract/package.json src/contract/
+COPY src/gmail-mcp/package.json src/gmail-mcp/
 COPY src/payments/package.json src/payments/
 COPY src/paywall-client/package.json src/paywall-client/
 RUN bun install --frozen-lockfile --production
